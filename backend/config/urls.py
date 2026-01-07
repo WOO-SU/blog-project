@@ -16,8 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from interactions.views import CommentViewSet, LikeViewSet
+
+router = DefaultRouter()
+
+router.register(r'comments', CommentViewSet)
+router.register(r'likes', LikeViewSet, basename='likes')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include("apps.urls")),
+    path('api/user/', include('apps.users.urls')),
+    path('api/', include(router.urls)),
 ]
