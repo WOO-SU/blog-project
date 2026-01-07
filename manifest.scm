@@ -1,0 +1,8 @@
+(specifications->manifest
+ '("python"
+   "python-pip"
+   "python-virtualenv"
+   "pkg-config"
+   "mariadb:dev"
+   "mariadb:lib"
+   "zlib"))
