@@ -5,4 +5,5 @@
    "pkg-config"
    "mariadb:dev"
    "mariadb:lib"
+   "node"
    "zlib"))
