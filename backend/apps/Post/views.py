@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import BasePermission, SAFE_METHODS, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import BasePermission, SAFE_METHODS, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
 from .models import Post
@@ -41,8 +41,10 @@ class PostViewSet(ModelViewSet):
 
     queryset = Post.objects.all().order_by("-created_at")
     serializer_class = PostSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
+    # IsAuthenticated : 권한 인증된 모든 사용자 접근 하용/ 인증x면 접근 거부 
+    
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
