@@ -1,6 +1,10 @@
 # blog-project
 our first toy project - blog
 
+## Remark
+As of 260110, the plan is to use docker for unified environment. 
+the setup below is intended to be temporary
+
 ## Env setup
 ### For guix users:
 
