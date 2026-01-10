@@ -22,7 +22,7 @@ python3 -m venv .venv
 pip install -r requirements.txt
 ```
 
-#### PoweShell
+#### PowerShell
 ```powershell
 python3 -m venv .venv
 .venv\Scripts\Activate.ps1
