@@ -4,8 +4,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
-from posts.models import Post
-from interactions.models import Comment, Like
+from apps.posts.models import Post
+from apps.interactions.models import Comment, Like
 
 User = get_user_model()
 
@@ -56,7 +56,7 @@ class InteractionTests(APITestCase):
         
         # 3. Try to PATCH User B's comment
         url = reverse('comment-detail', args=[comment.id])
-        response = self.client.patch(url, {'content': 'Hacked!'})
+        response = self.client.patch(url, {'content': 'Hacked!'}, format='json')
 
         # 4. Expect Forbidden (403)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
