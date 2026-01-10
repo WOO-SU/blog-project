@@ -49,7 +49,4 @@ class PostViewSet(ModelViewSet):
         serializer.save(user=self.request.user)
 
     def perform_update(self, serializer):
-        obj = self.get_object()
-        if obj.user != self.request.user:
-            raise PermissionDenied("글 수정 권한이 없습니다!")
         serializer.save()
