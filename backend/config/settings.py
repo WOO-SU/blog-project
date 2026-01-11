@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 env = environ.Env(
     DEBUG=(bool, False)
