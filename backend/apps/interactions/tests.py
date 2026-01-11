@@ -44,7 +44,8 @@ class InteractionTests(APITestCase):
         
         response = self.client.post(self.comment_url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Comment.objects.get().content, 'Nice post!')
+        comment = Comment.objects.get(post=self.post, user=self.user_b)
+        self.assertEqual(comment, 'Nice post!')
 
     def test_edit_comment_permission(self):
         """Test that User A cannot edit User B's comment"""

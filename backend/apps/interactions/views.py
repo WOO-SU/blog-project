@@ -38,13 +38,13 @@ class LikeViewSet(viewsets.GenericViewSet):
         post_id = serializer.validated_data['post_id']
         user = request.user
 
-        deleted, _ = Like.objects.filter(user=user, post_id=post_id).delete()
-        if deleted:
-            return Response({"message": "Unliked"}, status = status.HTTP_200_OK)
-        
-        try:
-            with transaction.atomic():
+        with transaction.atomic():
+            like = Like.objects.filter(user=user, post_id=post_id).select_for_update().first()
+
+            if like:
+                like.delete()
+                return Response({"message": "Unliked"}, status = status.HTTP_200_OK)
+            else:
                 Like.objects.create(user=user, post_id=post_id)
-            return Response({"message": "Liked"}, status=status.HTTP_201_CREATED)
-        except IntegrityError:
-            return Response({"message": "Liked"}, status=status.HTTP_201_CREATED)
+                return Response({"message": "Liked"}, status=status.HTTP_201_CREATED)
+        
