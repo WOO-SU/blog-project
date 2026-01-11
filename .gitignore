@@ -1,0 +1,16 @@
+# env files
+*/.env
+.env
+
+# Python virtualenv
+.venv/
+__pycache__/
+*.pyc
+
+# Node.js
+node_modules/
+dist/
+build/
+.vite/
+
+.DS_Store
