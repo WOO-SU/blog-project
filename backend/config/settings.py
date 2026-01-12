@@ -34,7 +34,7 @@ ALLOWED_HOSTS = ["*"]
 
 PROJECT_APPS = [
     "apps.user",
-    "apps.Post"
+    "apps.post",
     "apps.interactions",
 ]
 
