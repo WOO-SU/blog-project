@@ -9,7 +9,7 @@ class Post(models.Model):
         related_name="posts",
     )
     content = models.TextField()
-
+    title = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
