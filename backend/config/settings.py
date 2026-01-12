@@ -12,11 +12,11 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+import environ
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -33,9 +33,9 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
-
 PROJECT_APPS = [
     "apps.user",
+    "apps.interactions",
 ]
 
 INSTALLED_APPS = [
@@ -45,13 +45,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'rest_framework',
-<<<<<<< HEAD
+    'rest_framework.authtoken',
+
 ] + PROJECT_APPS
-=======
-    'apps.Post.apps.PostConfig',
-]
->>>>>>> origin/develop
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
