@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
-from apps.posts.models import Post
+from apps.post.models import Post
 from apps.interactions.models import Comment, Like
 
 User = get_user_model()
