@@ -5,13 +5,13 @@ our first toy project - blog
 ### Please follow the instruction below.
 ```bash
 docker compose up -d
-docker ps # Chekc for health
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py createsuperuser
+docker ps # Check for health
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py createsuperuser
 ```
 
 ### After that, access site by:
-http://localhost:8000/admin/
+[http://localhost:8000/admin/](http://localhost:8000/admin/)
 
 ## Env setup
 ### For guix users:

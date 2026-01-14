@@ -34,13 +34,13 @@ services:
       db:
         condition: service_healthy
     environment:
-      - MYSQL_DATABASE=blog_db
-      - MYSQL_USER=user
-      - MYSQL_PASSWORD=password
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DEBUG=True
-      - DJANGO_SECRET_KEY='django-insecure-7&3n#5ch5xkl&9ri^ph1)mtw(%h8*zu5_$$hj*rktx+xk3rzi^s'
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_HOST=${DB_HOST}
+      - MYSQL_PORT=${DB_PORT}
+      - DEBUG=${DEBUG}
+      - DJANGO_SECRET_KEY=${SECRET_KEY}
 
   # frontend:
   #   build: ./frontend
