@@ -3,6 +3,9 @@ from django.shortcuts import render
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import BasePermission, SAFE_METHODS, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 
 from .models import Post
 from .serializers import PostSerializer
@@ -50,3 +53,13 @@ class PostViewSet(ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save()
+
+    @action(detail=False, methods=["get"], url_path="me", permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """
+        GET/ posts/me/
+        로그인한 사용자의 글만 반환
+        """
+        qs=self.get_queryset().filter(user=request.user)
+        serializer=self.get_serializer(qs, many=True)
+        return Response(serializer.data)
