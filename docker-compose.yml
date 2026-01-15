@@ -1,0 +1,59 @@
+# docker-compose.yml
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: blog_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: blog_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: rootpassword
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: blog_be
+    # For Development 
+    command: python manage.py runserver 0.0.0.0:8000
+    
+    # For Deployment
+    # command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_HOST=${DB_HOST}
+      - MYSQL_PORT=${DB_PORT}
+      - DEBUG=${DEBUG}
+      - DJANGO_SECRET_KEY=${SECRET_KEY}
+
+  # frontend:
+  #   build: ./frontend
+  #   container_name: blog_fe
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - WATCHPACK_POLLING=true
+  #   stdin_open: true
+  #   tty: true
+
+volumes:
+  db_data:

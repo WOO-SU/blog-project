@@ -1,12 +1,17 @@
 # blog-project
 our first toy project - blog
 
-# Notion Link
-[Notion] (https://www.notion.so/igotyabingo/2db27d68d8d0808f9f9ccf4f71b0d87d)
+## We are now migrating to docker containers
+### Please follow the instruction below.
+```bash
+docker compose up -d
+docker ps # Check for health
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py createsuperuser
+```
 
-## Warning
-As of 260110, the plan is to use docker for unified environment. 
-the setup below is intended to be temporary
+### After that, access site by:
+[http://localhost:8000/admin/](http://localhost:8000/admin/)
 
 ## Env setup
 ### For guix users:
