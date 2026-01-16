@@ -3,6 +3,7 @@ from .models import Post
 
 class PostSerializer(serializers.ModelSerializer):
     user_id = serializers.ReadOnlyField(source="user.id")
+    is_mine = serializers.BooleanField(read_only=True)
     author = serializers.ReadOnlyField(source='user.username')  # Should be CharField, since username is variable
     comment_count = serializers.IntegerField(read_only=True)
     like_count = serializers.IntegerField(read_only=True)
@@ -21,8 +22,9 @@ class PostSerializer(serializers.ModelSerializer):
             'like_count',
             'comment_count',
             'liked_by_me',
+            'is_mine',
         ]
-        read_only_fields = ["id", "user_id", 'author', "created_at", "updated_at"]
+        read_only_fields = ["id", "user_id", 'author', "created_at", "updated_at", 'is_mine']
 
 class PostListSerializer(serializers.ModelSerializer):
     comment_count = serializers.IntegerField(read_only=True)

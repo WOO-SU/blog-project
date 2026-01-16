@@ -1,4 +1,4 @@
-from django.db.models import Count, Exists, OuterRef
+from django.db.models import Count, Exists, OuterRef, Case, When, Value, BooleanField
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import (
@@ -72,6 +72,25 @@ class PostViewSet(ModelViewSet):
 
         # Count comments
         qs = qs.annotate(comment_count=Count("comment", distinct=True))
+
+        user = self.request.user
+        if user.is_authenticated:
+            qs = qs.annotate(
+                liked_by_me=Exists(
+                    Like.objects.filter(user=user, post_id=OuterRef('pk'))
+                ),
+                is_mine = Case(
+                    When(user=user, then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField(),
+                ),
+            )
+        else:
+            qs = qs.annotate(
+                liked_by_me=Value(False, output_field=BooleanField()),
+                is_mine=Value(False, output_field=BooleanField()),
+            )
+
 
         return qs
 
