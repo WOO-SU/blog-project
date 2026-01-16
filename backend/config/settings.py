@@ -67,15 +67,12 @@ MIDDLEWARE = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-if DEBUG == 'True':
-    CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
-    CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"]
-else:
-    CORS_ALLOWED_ORIGINS = [
-        # "https://www.yourdomain.com",
-        # "https://api.yourdomain.com"
-    ]
-    CSRF_TRUSTED_ORIGINS = ["https://www.yourdomain.com"]
+cors_env = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+csrf_env = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000")
+
+# Convert "url1,url2" -> ["url1", "url2"]
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_env.split(",")]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_env.split(",")]
 
 
 REST_FRAMEWORK = {
