@@ -65,9 +65,18 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
+CORS_ALLOW_CREDENTIALS = True
+
+if DEBUG == 'True':
+    CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
+    CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"]
+else:
+    CORS_ALLOWED_ORIGINS = [
+        # "https://www.yourdomain.com",
+        # "https://api.yourdomain.com"
+    ]
+    CSRF_TRUSTED_ORIGINS = ["https://www.yourdomain.com"]
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
