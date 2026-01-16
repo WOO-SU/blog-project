@@ -42,18 +42,21 @@ services:
       - DEBUG=${DEBUG}
       - DJANGO_SECRET_KEY=${SECRET_KEY}
 
-  # frontend:
-  #   build: ./frontend
-  #   container_name: blog_fe
-  #   volumes:
-  #     - ./frontend:/app
-  #     - /app/node_modules
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - WATCHPACK_POLLING=true
-  #   stdin_open: true
-  #   tty: true
+  frontend:
+    build: ./frontend
+    container_name: blog_fe
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - WATCHPACK_POLLING=true
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
 
 volumes:
   db_data:
