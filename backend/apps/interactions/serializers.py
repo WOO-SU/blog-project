@@ -3,29 +3,20 @@ from .models import Comment, Like
 from apps.post.models import Post
 
 class CommentSerializer(serializers.ModelSerializer):
+    user_id = serializers.ReadOnlyField(source='user.id')
     author = serializers.ReadOnlyField(source='user.username')
 
     class Meta:
         model = Comment
-        fields = ['id', 'post', 'author', 'content', 'created_at']
+        fields = ['id', 'user_id', 'author', 'content', 'created_at']
+        read_only_fields = ['id', 'user_id', 'created_at']
 
 class LikeSerializer(serializers.ModelSerializer):
-    user = serializers.ReadOnlyField(source="user.username")
-    post = serializers.PrimaryKeyRelatedField(read_only=True)
+    user_id = serializers.ReadOnlyField(source="user.id")
+    post_id = serializers.ReadOnlyField(source='post.id')
 
     class Meta:
         model = Like
-        fields = ['id', 'user', 'post', 'created_at']
+        fields = ['id', 'user_id', 'post_id', 'created_at']
         read_only_fields = fields
 
-class LikeToggleSerializer(serializers.Serializer):
-    """
-    Input serializer for POST /api/likes/toggle/
-    Body: {"post_id": 1}
-    """
-    post_id = serializers.IntegerField()
-
-    def validate_post_id(self, value: int) -> int:
-        if not Post.objects.filter(id=value).exists():
-            raise serializers.ValidationError("Post not found.")
-        return value
