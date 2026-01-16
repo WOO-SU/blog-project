@@ -5,46 +5,50 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db import transaction, IntegrityError
 from .models import Comment, Like
-from .serializers import CommentSerializer, LikeSerializer, LikeToggleSerializer
+from .serializers import CommentSerializer, LikeSerializer
 from .permissions import IsOwnerOrReadOnly
 
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
+    queryset = Comment.objects.all().order_by("-created_at")
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-class LikeViewSet(viewsets.GenericViewSet):
+    @action(detail=False, methods=['get'], url_path='me')
+    def me(self, request):
+        """
+        GET /api/comments/me
+        Optional: ?post=<post_id>
+        """
+        qs = self.get_queryset().filter(user=request.user)
+        post_id = request.query_params.get("post")
+        if post_id:
+            qs = qs.filter(post_id=post_id)
+
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+class LikeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Like.objects.all().order_by("-created_at")   
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = LikeSerializer
 
-    def get_serializer_class(self):
-        if self.action == "toggle":
-            return LikeToggleSerializer
-        return LikeSerializer  # 필요하면
-
-    @action(detail=False, methods=['post'])
-    def toggle(self, request):
+    @action(detail=False, methods=['get'], url_path='me')
+    def me(self, request):
         """
-        POST /api/likes/toggle/
-        Body: {"post_id": 1}
+        POST /api/likes/me
         Logic: If like exists, delete it (unlike). If not, create it (like).
         """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        qs = self.get_queryset().filter(user=request.user)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
-        post_id = serializer.validated_data['post_id']
-        user = request.user
 
-        with transaction.atomic():
-            like = Like.objects.filter(user=user, post_id=post_id).select_for_update().first()
-
-            if like:
-                like.delete()
-                return Response({"message": "Unliked"}, status = status.HTTP_200_OK)
-            else:
-                Like.objects.create(user=user, post_id=post_id)
-                return Response({"message": "Liked"}, status=status.HTTP_201_CREATED)
         

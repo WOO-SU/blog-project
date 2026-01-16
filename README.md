@@ -8,6 +8,10 @@ docker compose up -d
 docker ps # Check for health
 docker compose exec backend python manage.py migrate
 docker compose exec backend python manage.py createsuperuser
+
+# check logs
+docker logs -f blog_be
+docker logs -f blog_db
 ```
 
 ### After that, access site by:
