@@ -108,7 +108,49 @@ export async function getPostsApi() {
         throw new Error((data as ApiResponse).detail || "글 조회 실패");
     }
 
-    return data as PostsListResponse;
+    return data.results;
+}
+
+/**
+ * 글 상세: GET /api/posts/{id}/
+ */
+export async function getPostDetailApi(id: number | string) {
+    const res = await fetch(`/api/posts/${id}/`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+            "X-CSRFToken": getCookie("csrftoken") || "",
+        },
+    });
+
+    const data = (await safeJson(res)) as Post & ApiResponse;
+
+    if (!res.ok) {
+        throw new Error((data as ApiResponse).detail || "글 상세 조회 실패");
+    }
+
+    return data as Post;
+}
+
+/**
+ * 내 글 목록: GET /api/posts/me/
+ */
+export async function getMyPostsApi() {
+    const res = await fetch(`/api/posts/me/`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+            "X-CSRFToken": getCookie("csrftoken") || "",
+        },
+    });
+
+    const data = (await safeJson(res)) as PostsListResponse & ApiResponse;
+
+    if (!res.ok) {
+        throw new Error((data as ApiResponse).detail || "내 글 조회 실패");
+    }
+
+    return data;
 }
 
 /**
@@ -139,7 +181,7 @@ export async function createPostApi(body: CreatePostBody) {
  * body: 부분 업데이트(예: { title?, content? })
  */
 export async function updatePostApi(id: number | string, body: UpdatePostBody) {
-    const res = await fetch(`/api/posts/${id}`, {
+    const res = await fetch(`/api/posts/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json",
             "X-CSRFToken": getCookie("csrftoken") || ""
@@ -162,7 +204,7 @@ export async function updatePostApi(id: number | string, body: UpdatePostBody) {
  * (성공 시 204 No Content일 수 있어서 safeJson이 {} 반환해도 정상)
  */
 export async function deletePostApi(id: number | string) {
-    const res = await fetch(`/api/posts/${id}`, {
+    const res = await fetch(`/api/posts/${id}/`, {
         method: "DELETE",
         credentials: "include",
         headers: {
@@ -199,10 +241,10 @@ export type CreateCommentBody = {
 };
 
 /**
- * 댓글 조회: GET /api/comments/
+ * 댓글 조회: GET /api/posts/{postId}/comments/
  */
-export async function getCommentsApi() {
-    const res = await fetch(`/api/comments/`, {
+export async function getCommentsApi(postId: number | string) {
+    const res = await fetch(`/api/posts/${postId}/comments/`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -210,27 +252,27 @@ export async function getCommentsApi() {
           },
     });
 
-    const data = (await safeJson(res)) as Comment[] & ApiResponse;
+    const data = (await safeJson(res)) as { results?: Comment[] } & Comment[] & ApiResponse;
 
     if (!res.ok) {
         throw new Error((data as ApiResponse).detail || "댓글 조회 실패");
     }
 
-    return data as Comment[];
+    return (data as { results?: Comment[] }).results || (data as Comment[]);
 }
 
 /**
- * 댓글 추가: POST /api/comments/
- * body: { post, content }
+ * 댓글 추가: POST /api/posts/{postId}/comments/
+ * body: { content }
  */
 export async function createCommentApi(body: CreateCommentBody) {
-    const res = await fetch(`/api/interactions/comments/`, {
+    const res = await fetch(`/api/posts/${body.post}/comments/`, {
         method: "POST",
         headers: { "Content-Type": "application/json",
             "X-CSRFToken": getCookie("csrftoken") || ""
          },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ content: body.content }),
     });
 
     const data = (await safeJson(res)) as Comment & ApiResponse;
@@ -246,7 +288,7 @@ export async function createCommentApi(body: CreateCommentBody) {
  * 댓글 수정: PATCH /api/comments/{id}/
  */
 export async function updateCommentApi(id: number | string, content: string) {
-    const res = await fetch(`/api/comments/${id}/`, {
+    const res = await fetch(`/api/interactions/comments/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json",
             "X-CSRFToken": getCookie("csrftoken") || ""
@@ -268,7 +310,7 @@ export async function updateCommentApi(id: number | string, content: string) {
  * 댓글 삭제: DELETE /api/comments/{id}/
  */
 export async function deleteCommentApi(id: number | string) {
-    const res = await fetch(`/api/comments/${id}/`, {
+    const res = await fetch(`/api/interactions/comments/${id}/`, {
         method: "DELETE",
         credentials: "include",
         headers: {

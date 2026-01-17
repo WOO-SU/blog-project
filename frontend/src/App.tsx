@@ -48,7 +48,8 @@ export default function App() {
     setIsLoading(true);
     try {
       const data = await getPostsApi();
-      
+      console.log("posts from api:", data);  
+
       // 서버 데이터를 프론트엔드 형식에 맞게 가공
       const processedPosts = data.map((post: PostType) => ({
         ...post,
@@ -116,6 +117,9 @@ export default function App() {
       // String()으로 양쪽을 감싸서 "1" === "1" 형태가 되도록 보장
       return posts.find(p => String(p.id) === String(currentPage.postId));
     }
+    if (currentPage.type === 'new-post' && currentPage.editPostId) {
+      return posts.find(p => String(p.id) === String(currentPage.editPostId));
+    }
     return undefined;
   };
 
@@ -167,7 +171,6 @@ export default function App() {
         
         {currentPage.type === 'settings' && (
           <SettingsPage 
-            posts={posts} 
             onNavigate={handleNavigate} 
           />
         )}
