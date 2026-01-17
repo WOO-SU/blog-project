@@ -1,13 +1,29 @@
-import { Post } from "../api/auth";
+import { useEffect, useState } from "react";
+import { getMyPostsApi, Post } from "../api/auth";
 
 interface SettingsPageProps {
-  posts: Post[];
   onNavigate: (page: { type: string; postId: string | number }) => void;
 }
 
-export function SettingsPage({ posts, onNavigate }: SettingsPageProps) {
-  // Filter to show only user's posts
-  const userPosts = posts.filter(post => post.isUserPost);
+export function SettingsPage({ onNavigate }: SettingsPageProps) {
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
+
+  useEffect(() => {
+    getMyPostsApi()
+      .then((data) => {
+        const processedPosts = data.map((post) => ({
+          ...post,
+          preview: post.preview || (post.content.length > 100
+            ? post.content.substring(0, 100) + "..."
+            : post.content),
+        }));
+        setUserPosts(processedPosts);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch my posts:", error);
+        setUserPosts([]);
+      });
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">

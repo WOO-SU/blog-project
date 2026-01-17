@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Edit2, Trash2, Loader2 } from 'lucide-react';
 // auth.ts에서 정의한 Post 타입과 API 함수들을 임포트
 import { 
   Post as PostType, 
   toggleLikeApi, 
-  createCommentApi, 
+  createCommentApi,
+  getCommentsApi,
+  getPostDetailApi,
   updateCommentApi, 
   deleteCommentApi,
   deletePostApi 
@@ -21,6 +23,8 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
   const [commentText, setCommentText] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<number | string | null>(null);
   const [editedCommentText, setEditedCommentText] = useState('');
+  const [comments, setComments] = useState<any[]>([]);
+  const [isUserPost, setIsUserPost] = useState<boolean>(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
@@ -31,6 +35,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     setIsDeletingPost(true);
     try {
       await deletePostApi(post.id);
+      await onRefresh();
       onNavigate({ type: 'main' });
     } catch (error: any) {
       alert(error.message || "게시글 삭제 실패");
@@ -48,6 +53,31 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     }
   };
 
+  const loadComments = async () => {
+    try {
+      const data = await getCommentsApi(post.id);
+      setComments(data || []);
+    } catch (error) {
+      console.error("Failed to fetch comments:", error);
+      setComments([]);
+    }
+  };
+
+  useEffect(() => {
+    loadComments();
+  }, [post.id]);
+
+  useEffect(() => {
+    getPostDetailApi(post.id)
+      .then((data) => {
+        setIsUserPost(Boolean((data as any).is_mine));
+      })
+      .catch((error) => {
+        console.error("Failed to fetch post detail:", error);
+        setIsUserPost(false);
+      });
+  }, [post.id]);
+
   // 댓글 작성
   const handleAddComment = async () => {
     if (!commentText.trim() || isSubmitting) return;
@@ -61,6 +91,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
       });
       setCommentText('');
       onRefresh();
+      await loadComments();
     } catch (error: any) {
       alert(error.message || "댓글 작성 실패");
     } finally {
@@ -76,6 +107,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
       await updateCommentApi(commentId, editedCommentText);
       setEditingCommentId(null);
       onRefresh();
+      await loadComments();
     } catch (error: any) {
       alert(error.message);
     } finally {
@@ -89,12 +121,11 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     try {
       await deleteCommentApi(commentId);
       onRefresh();
+      await loadComments();
     } catch (error: any) {
       alert(error.message);
     }
   };
-
-  const comments = post.comments || [];
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 relative">
@@ -106,7 +137,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
         </h1>
 
         {/* ✅ 내 글일 때만 수정/삭제 버튼 노출 */}
-        {post.isUserPost && (
+        {(post.isUserPost || isUserPost) && (
           <div className="flex gap-2 shrink-0 ml-4">
             <button
               onClick={() => onNavigate({ type: 'new-post', postId: post.id })}
