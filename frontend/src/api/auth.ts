@@ -108,7 +108,7 @@ export async function getPostsApi() {
         throw new Error((data as ApiResponse).detail || "글 조회 실패");
     }
 
-    return data as PostsListResponse;
+    return data.results;
 }
 
 /**
