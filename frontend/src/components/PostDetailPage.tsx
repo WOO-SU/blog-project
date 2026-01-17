@@ -6,6 +6,7 @@ import {
   toggleLikeApi, 
   createCommentApi,
   getCommentsApi,
+  getPostDetailApi,
   updateCommentApi, 
   deleteCommentApi,
   deletePostApi 
@@ -23,6 +24,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
   const [editingCommentId, setEditingCommentId] = useState<number | string | null>(null);
   const [editedCommentText, setEditedCommentText] = useState('');
   const [comments, setComments] = useState<any[]>([]);
+  const [isUserPost, setIsUserPost] = useState<boolean>(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
@@ -33,6 +35,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     setIsDeletingPost(true);
     try {
       await deletePostApi(post.id);
+      await onRefresh();
       onNavigate({ type: 'main' });
     } catch (error: any) {
       alert(error.message || "게시글 삭제 실패");
@@ -62,6 +65,17 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
 
   useEffect(() => {
     loadComments();
+  }, [post.id]);
+
+  useEffect(() => {
+    getPostDetailApi(post.id)
+      .then((data) => {
+        setIsUserPost(Boolean((data as any).is_mine));
+      })
+      .catch((error) => {
+        console.error("Failed to fetch post detail:", error);
+        setIsUserPost(false);
+      });
   }, [post.id]);
 
   // 댓글 작성
@@ -123,7 +137,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
         </h1>
 
         {/* ✅ 내 글일 때만 수정/삭제 버튼 노출 */}
-        {post.isUserPost && (
+        {(post.isUserPost || isUserPost) && (
           <div className="flex gap-2 shrink-0 ml-4">
             <button
               onClick={() => onNavigate({ type: 'new-post', postId: post.id })}

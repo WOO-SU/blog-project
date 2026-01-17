@@ -117,6 +117,9 @@ export default function App() {
       // String()으로 양쪽을 감싸서 "1" === "1" 형태가 되도록 보장
       return posts.find(p => String(p.id) === String(currentPage.postId));
     }
+    if (currentPage.type === 'new-post' && currentPage.editPostId) {
+      return posts.find(p => String(p.id) === String(currentPage.editPostId));
+    }
     return undefined;
   };
 

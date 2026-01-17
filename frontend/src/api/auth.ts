@@ -112,6 +112,27 @@ export async function getPostsApi() {
 }
 
 /**
+ * 글 상세: GET /api/posts/{id}/
+ */
+export async function getPostDetailApi(id: number | string) {
+    const res = await fetch(`/api/posts/${id}/`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+            "X-CSRFToken": getCookie("csrftoken") || "",
+        },
+    });
+
+    const data = (await safeJson(res)) as Post & ApiResponse;
+
+    if (!res.ok) {
+        throw new Error((data as ApiResponse).detail || "글 상세 조회 실패");
+    }
+
+    return data as Post;
+}
+
+/**
  * 내 글 목록: GET /api/posts/me/
  */
 export async function getMyPostsApi() {
@@ -160,7 +181,7 @@ export async function createPostApi(body: CreatePostBody) {
  * body: 부분 업데이트(예: { title?, content? })
  */
 export async function updatePostApi(id: number | string, body: UpdatePostBody) {
-    const res = await fetch(`/api/posts/${id}`, {
+    const res = await fetch(`/api/posts/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json",
             "X-CSRFToken": getCookie("csrftoken") || ""
@@ -183,7 +204,7 @@ export async function updatePostApi(id: number | string, body: UpdatePostBody) {
  * (성공 시 204 No Content일 수 있어서 safeJson이 {} 반환해도 정상)
  */
 export async function deletePostApi(id: number | string) {
-    const res = await fetch(`/api/posts/${id}`, {
+    const res = await fetch(`/api/posts/${id}/`, {
         method: "DELETE",
         credentials: "include",
         headers: {
