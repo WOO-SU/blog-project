@@ -220,10 +220,10 @@ export type CreateCommentBody = {
 };
 
 /**
- * 댓글 조회: GET /api/comments/
+ * 댓글 조회: GET /api/posts/{postId}/comments/
  */
-export async function getCommentsApi() {
-    const res = await fetch(`/api/comments/`, {
+export async function getCommentsApi(postId: number | string) {
+    const res = await fetch(`/api/posts/${postId}/comments/`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -231,27 +231,27 @@ export async function getCommentsApi() {
           },
     });
 
-    const data = (await safeJson(res)) as Comment[] & ApiResponse;
+    const data = (await safeJson(res)) as { results?: Comment[] } & Comment[] & ApiResponse;
 
     if (!res.ok) {
         throw new Error((data as ApiResponse).detail || "댓글 조회 실패");
     }
 
-    return data as Comment[];
+    return (data as { results?: Comment[] }).results || (data as Comment[]);
 }
 
 /**
- * 댓글 추가: POST /api/comments/
- * body: { post, content }
+ * 댓글 추가: POST /api/posts/{postId}/comments/
+ * body: { content }
  */
 export async function createCommentApi(body: CreateCommentBody) {
-    const res = await fetch(`/api/interactions/comments/`, {
+    const res = await fetch(`/api/posts/${body.post}/comments/`, {
         method: "POST",
         headers: { "Content-Type": "application/json",
             "X-CSRFToken": getCookie("csrftoken") || ""
          },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ content: body.content }),
     });
 
     const data = (await safeJson(res)) as Comment & ApiResponse;
