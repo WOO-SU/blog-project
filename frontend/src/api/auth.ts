@@ -112,6 +112,27 @@ export async function getPostsApi() {
 }
 
 /**
+ * 내 글 목록: GET /api/posts/me/
+ */
+export async function getMyPostsApi() {
+    const res = await fetch(`/api/posts/me/`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+            "X-CSRFToken": getCookie("csrftoken") || "",
+        },
+    });
+
+    const data = (await safeJson(res)) as PostsListResponse & ApiResponse;
+
+    if (!res.ok) {
+        throw new Error((data as ApiResponse).detail || "내 글 조회 실패");
+    }
+
+    return data;
+}
+
+/**
  * 글 업로드(작성): POST /api/posts/
  * body: { ... }
  */

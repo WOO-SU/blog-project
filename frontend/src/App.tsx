@@ -48,7 +48,8 @@ export default function App() {
     setIsLoading(true);
     try {
       const data = await getPostsApi();
-      
+      console.log("posts from api:", data);  
+
       // 서버 데이터를 프론트엔드 형식에 맞게 가공
       const processedPosts = data.map((post: PostType) => ({
         ...post,
@@ -167,7 +168,6 @@ export default function App() {
         
         {currentPage.type === 'settings' && (
           <SettingsPage 
-            posts={posts} 
             onNavigate={handleNavigate} 
           />
         )}
