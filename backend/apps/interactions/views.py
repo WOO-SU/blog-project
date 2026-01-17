@@ -1,6 +1,6 @@
 from django.shortcuts import render
 
-from rest_framework import viewsets, permissions, status
+from rest_framework import mixins, viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db import transaction, IntegrityError
@@ -8,7 +8,17 @@ from .models import Comment, Like
 from .serializers import CommentSerializer, LikeSerializer
 from .permissions import IsOwnerOrReadOnly
 
-class CommentViewSet(viewsets.ModelViewSet):
+class CommentViewSet(mixins.RetrieveModelMixin,
+                     mixins.UpdateModelMixin, 
+                     mixins.DestroyModelMixin, 
+                     viewsets.GenericViewSet):
+    """
+    Handles:
+    GET /api/comments/{id}/    -> View a single comment
+    PATCH /api/comments/{id}/  -> Update a comment
+    DELETE /api/comments/{id}/ -> Delete a comment
+    """
+
     queryset = Comment.objects.all().order_by("-created_at")
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
@@ -35,7 +45,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
-class LikeViewSet(viewsets.ReadOnlyModelViewSet):
+class LikeViewSet(viewsets.GenericViewSet):
     queryset = Like.objects.all().order_by("-created_at")   
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = LikeSerializer
@@ -43,7 +53,7 @@ class LikeViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'], url_path='me')
     def me(self, request):
         """
-        POST /api/likes/me
+        GET /api/likes/me
         Logic: If like exists, delete it (unlike). If not, create it (like).
         """
         qs = self.get_queryset().filter(user=request.user)
