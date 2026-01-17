@@ -31,7 +31,7 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               <Home className="w-4 h-4" />
-              Home
+              Main
             </button>
 
             <button
@@ -40,18 +40,7 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               <PenSquare className="w-4 h-4" />
-              New post
-            </button>
-
-            <button
-              type="button"
-              // App의 Page union이 "my-post-view"에 postId를 요구하면,
-              // 안정적인 sentinel 값("me")을 넘겨서 타입/런타임 모두 안전하게 처리 가능.
-              onClick={() => onNavigate({ type: 'my-post-view', postId: 'me' })}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-            >
-              <PenSquare className="w-4 h-4" />
-              My posts
+              New Post
             </button>
 
             <button
