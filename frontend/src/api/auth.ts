@@ -289,7 +289,7 @@ export async function updateCommentApi(id: number | string, content: string) {
  * 댓글 삭제: DELETE /api/comments/{id}/
  */
 export async function deleteCommentApi(id: number | string) {
-    const res = await fetch(`/api/comments/${id}/`, {
+    const res = await fetch(`/api/interactions/comments/${id}/`, {
         method: "DELETE",
         credentials: "include",
         headers: {
