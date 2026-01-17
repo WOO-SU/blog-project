@@ -267,7 +267,7 @@ export async function createCommentApi(body: CreateCommentBody) {
  * 댓글 수정: PATCH /api/comments/{id}/
  */
 export async function updateCommentApi(id: number | string, content: string) {
-    const res = await fetch(`/api/comments/${id}/`, {
+    const res = await fetch(`/api/interactions/comments/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json",
             "X-CSRFToken": getCookie("csrftoken") || ""
