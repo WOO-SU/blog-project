@@ -1,9 +1,15 @@
 // src/api/auth.ts
 export type ApiResponse = { detail?: string };
 
+export type LikeResponse = {
+  post_id: number;
+  like_count: number;
+  liked_by_me: boolean;
+};
+
 async function safeJson(res: Response) {
   try {
-    if (res.status === 204) return {}; 
+    if (res.status === 204) return {};
     return await res.json();
   } catch {
     return {};
@@ -40,6 +46,7 @@ export async function logoutApi() {
   return data;
 }
 
+// ✅ Added isUserPost to fix the TypeScript error
 export type Post = {
     id: number;
     title: string;
@@ -47,11 +54,10 @@ export type Post = {
     preview?: string;      
     author: string;        
     created_at: string;    
-    
-    // ✅ Backend Fields (snake_case)
     like_count: number;    
     liked_by_me: boolean;  
-    is_mine?: boolean;     
+    is_mine?: boolean;
+    isUserPost?: boolean; // Added this property
     comments: any[];       
 };
   
@@ -88,9 +94,10 @@ export async function getMyPostsApi() {
         credentials: "include",
         headers: { "X-CSRFToken": getCookie("csrftoken") || "" },
     });
-    const data = (await safeJson(res)) as PostsListResponse & ApiResponse;
+    const data = (await safeJson(res)) as any;
     if (!res.ok) throw new Error((data as ApiResponse).detail || "내 글 조회 실패");
-    return data;
+    // Ensure we return an array
+    return Array.isArray(data) ? data : []; 
 }
 
 export async function createPostApi(body: CreatePostBody) {
@@ -184,26 +191,24 @@ export async function deleteCommentApi(id: number | string) {
     return data;
 }
 
-/** ✅ 좋아요 생성: POST /api/posts/{id}/likes/ */
 export async function likePostApi(postId: number | string) {
     const res = await fetch(`/api/posts/${postId}/likes/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") || "" },
         credentials: "include",
     });
-    const data: ApiResponse = await safeJson(res);
+    const data = (await safeJson(res)) as LikeResponse & ApiResponse;
     if (!res.ok) throw new Error(data.detail || "좋아요 실패");
     return data; 
 }
 
-/** ✅ 좋아요 취소: DELETE /api/posts/{id}/likes/ */
 export async function unlikePostApi(postId: number | string) {
     const res = await fetch(`/api/posts/${postId}/likes/`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") || "" },
         credentials: "include",
     });
-    const data: ApiResponse = await safeJson(res);
+    const data = (await safeJson(res)) as LikeResponse & ApiResponse;
     if (!res.ok) throw new Error(data.detail || "좋아요 취소 실패");
     return data; 
 }

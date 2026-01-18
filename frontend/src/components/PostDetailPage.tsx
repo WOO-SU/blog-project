@@ -24,7 +24,6 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
   const [editedCommentText, setEditedCommentText] = useState('');
   const [comments, setComments] = useState<any[]>([]);
   
-  // Initialize with props, but we will fetch the 'true' status immediately
   const [isLiked, setIsLiked] = useState<boolean>(post.liked_by_me || false);
   const [likeCount, setLikeCount] = useState<number>(post.like_count || 0);
   const [isUserPost, setIsUserPost] = useState<boolean>(post.is_mine || post.isUserPost || false);
@@ -33,14 +32,13 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
   const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // 1. Fetch REAL Detail Data (Because List API might miss liked_by_me)
+  // 1. Fetch REAL Detail Data
   useEffect(() => {
     let isMounted = true;
     
     getPostDetailApi(post.id)
       .then((data: any) => {
          if (isMounted) {
-            // Update local state with the AUTHORITATIVE data from detail API
             setIsLiked(data.liked_by_me);
             setLikeCount(data.like_count);
             setIsUserPost(data.is_mine);
@@ -53,7 +51,6 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     return () => { isMounted = false; };
   }, [post.id]);
 
-  // 2. Load Comments
   const loadComments = async () => {
     try {
       const data = await getCommentsApi(post.id);
@@ -80,36 +77,32 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     }
   };
 
-  // 3. Like Toggle Logic
+  // 2. Updated Toggle Logic (Uses correctly typed response)
   const handleToggleLike = async () => {
-    // Optimistic Update
     const prevLiked = isLiked;
     const prevCount = likeCount;
 
+    // Optimistic Update
     setIsLiked(!prevLiked);
     setLikeCount(prevLiked ? prevCount - 1 : prevCount + 1);
 
     try {
       let response;
       if (prevLiked) {
-         // Was liked -> Delete like
          response = await unlikePostApi(post.id);
       } else {
-         // Was not liked -> Create like
          response = await likePostApi(post.id);
       }
       
-      // Update with confirmed data from server
+      // ✅ No red lines here now because response is LikeResponse
       if (response) {
           setIsLiked(response.liked_by_me);
           setLikeCount(response.like_count);
       }
       
-      // Notify parent to update list (but we ignore parent's props for likes now)
       onRefresh(); 
     } catch (error: any) {
       console.error(error);
-      // Revert on error
       setIsLiked(prevLiked);
       setLikeCount(prevCount);
     }
@@ -160,7 +153,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
           {post.title}
         </h1>
 
-        {(isUserPost) && (
+        {isUserPost && (
           <div className="flex gap-2 shrink-0 ml-4">
             <button
               onClick={() => onNavigate({ type: 'new-post', postId: post.id })}
