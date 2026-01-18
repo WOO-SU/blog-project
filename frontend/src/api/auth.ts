@@ -10,15 +10,11 @@ async function safeJson(res: Response) {
   }
 }
 
-/** ✅ csrftoken 쿠키 읽기 (Django CSRF용) */
 function getCookie(name: string) {
     const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
     return match ? decodeURIComponent(match[2]) : null;
 }
 
-/**
- * 로그인: POST /api/user/login
- */
 export async function loginApi(username: string, password: string) {
   const res = await fetch(`/api/user/login/`, {
     method: "POST",
@@ -28,200 +24,109 @@ export async function loginApi(username: string, password: string) {
     credentials: "include",
     body: JSON.stringify({ username, password }),
   });
-
   const data: ApiResponse = await safeJson(res);
-
-  if (!res.ok) {
-    throw new Error(data.detail || "로그인 실패");
-  }
-
+  if (!res.ok) throw new Error(data.detail || "로그인 실패");
   return data;
 }
 
-/**
- * 로그아웃: POST /api/user/logout
- */
 export async function logoutApi() {
   const res = await fetch(`/api/user/logout/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
   });
-
   const data: ApiResponse = await safeJson(res);
-
-  if (!res.ok) {
-    throw new Error(data.detail || "로그아웃 실패");
-  }
-
+  if (!res.ok) throw new Error(data.detail || "로그아웃 실패");
   return data;
 }
 
-
-/** --------------------------
- * Posts
- * -------------------------- */
-
 export type Post = {
-    id: number;            // Changed to number to match ID usage
+    id: number;
     title: string;
     content: string;
     preview?: string;      
     author: string;        
     created_at: string;    
     
-    // ✅ Updated to match Backend Serializer (snake_case)
+    // ✅ Backend Fields (snake_case)
     like_count: number;    
     liked_by_me: boolean;  
-    is_mine?: boolean;     // Assuming backend sends this or we calculate it
+    is_mine?: boolean;     
     comments: any[];       
 };
   
 export type PostsListResponse = Post[]; 
 
-export type CreatePostBody = {
-    title?: string;
-    content: string;
-};
+export type CreatePostBody = { title?: string; content: string; };
+export type UpdatePostBody = { title?: string; content?: string; };
 
-export type UpdatePostBody = {
-    title?: string;
-    content?: string;
-};
-
-/**
- * 글 조회(목록): GET /api/posts/
- */
 export async function getPostsApi() {
     const res = await fetch(`/api/posts/`, {
         method: "GET",
         credentials: "include",
-        headers: {
-            "X-CSRFToken": getCookie("csrftoken") || "",
-          },
+        headers: { "X-CSRFToken": getCookie("csrftoken") || "" },
     });
-
-    const data = (await safeJson(res)) as any; // Allow flexible response handling
-
-    if (!res.ok) {
-        throw new Error((data as ApiResponse).detail || "글 조회 실패");
-    }
-
-    // Handle pagination (results) or direct array
+    const data = (await safeJson(res)) as any;
+    if (!res.ok) throw new Error((data as ApiResponse).detail || "글 조회 실패");
     return Array.isArray(data) ? data : data.results;
 }
 
-/**
- * 글 상세: GET /api/posts/{id}/
- */
 export async function getPostDetailApi(id: number | string) {
     const res = await fetch(`/api/posts/${id}/`, {
         method: "GET",
         credentials: "include",
-        headers: {
-            "X-CSRFToken": getCookie("csrftoken") || "",
-        },
+        headers: { "X-CSRFToken": getCookie("csrftoken") || "" },
     });
-
     const data = (await safeJson(res)) as Post & ApiResponse;
-
-    if (!res.ok) {
-        throw new Error((data as ApiResponse).detail || "글 상세 조회 실패");
-    }
-
+    if (!res.ok) throw new Error((data as ApiResponse).detail || "글 상세 조회 실패");
     return data as Post;
 }
 
-/**
- * 내 글 목록: GET /api/posts/me/
- */
 export async function getMyPostsApi() {
     const res = await fetch(`/api/posts/me/`, {
         method: "GET",
         credentials: "include",
-        headers: {
-            "X-CSRFToken": getCookie("csrftoken") || "",
-        },
+        headers: { "X-CSRFToken": getCookie("csrftoken") || "" },
     });
-
     const data = (await safeJson(res)) as PostsListResponse & ApiResponse;
-
-    if (!res.ok) {
-        throw new Error((data as ApiResponse).detail || "내 글 조회 실패");
-    }
-
+    if (!res.ok) throw new Error((data as ApiResponse).detail || "내 글 조회 실패");
     return data;
 }
 
-/**
- * 글 업로드(작성): POST /api/posts/
- */
 export async function createPostApi(body: CreatePostBody) {
     const res = await fetch(`/api/posts/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken") || ""
-         },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") || "" },
         credentials: "include",
         body: JSON.stringify(body),
     });
-
     const data = (await safeJson(res)) as Post & ApiResponse;
-
-    if (!res.ok) {
-        throw new Error((data as ApiResponse).detail || "글 업로드 실패");
-    }
-
+    if (!res.ok) throw new Error((data as ApiResponse).detail || "글 업로드 실패");
     return data as Post;
 }
 
-/**
- * 글 수정: PATCH /api/posts/{id}/
- */
 export async function updatePostApi(id: number | string, body: UpdatePostBody) {
     const res = await fetch(`/api/posts/${id}/`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken") || ""
-         },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") || "" },
         credentials: "include",
         body: JSON.stringify(body),
     });
-
     const data = (await safeJson(res)) as Post & ApiResponse;
-
-    if (!res.ok) {
-        throw new Error((data as ApiResponse).detail || "글 수정 실패");
-    }
-
+    if (!res.ok) throw new Error((data as ApiResponse).detail || "글 수정 실패");
     return data as Post;
 }
 
-/**
- * 글 삭제: DELETE /api/posts/{id}/
- */
 export async function deletePostApi(id: number | string) {
     const res = await fetch(`/api/posts/${id}/`, {
         method: "DELETE",
         credentials: "include",
-        headers: {
-            "X-CSRFToken": getCookie("csrftoken") || ""
-         },
+        headers: { "X-CSRFToken": getCookie("csrftoken") || "" },
     });
-
     const data: ApiResponse = await safeJson(res);
-
-    if (!res.ok) {
-        throw new Error(data.detail || "글 삭제 실패");
-    }
-
+    if (!res.ok) throw new Error(data.detail || "글 삭제 실패");
     return data; 
 }
-
-
-/** --------------------------
- * Comments & Likes
- * -------------------------- */
 
 export type Comment = {
     id: number;
@@ -231,67 +136,40 @@ export type Comment = {
     created_at?: string;
 };
 
-export type CreateCommentBody = {
-    post: number;
-    content: string;
-};
+export type CreateCommentBody = { post: number; content: string; };
 
 export async function getCommentsApi(postId: number | string) {
     const res = await fetch(`/api/posts/${postId}/comments/`, {
         method: "GET",
         credentials: "include",
-        headers: {
-            "X-CSRFToken": getCookie("csrftoken") || "",
-          },
+        headers: { "X-CSRFToken": getCookie("csrftoken") || "" },
     });
-
     const data = (await safeJson(res)) as any;
-
-    if (!res.ok) {
-        throw new Error((data as ApiResponse).detail || "댓글 조회 실패");
-    }
-
+    if (!res.ok) throw new Error((data as ApiResponse).detail || "댓글 조회 실패");
     return (data.results || data) as Comment[];
 }
 
 export async function createCommentApi(body: CreateCommentBody) {
     const res = await fetch(`/api/posts/${body.post}/comments/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken") || ""
-         },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") || "" },
         credentials: "include",
         body: JSON.stringify({ content: body.content }),
     });
-
     const data = (await safeJson(res)) as Comment & ApiResponse;
-
-    if (!res.ok) {
-        throw new Error((data as ApiResponse).detail || "댓글 추가 실패");
-    }
-
+    if (!res.ok) throw new Error((data as ApiResponse).detail || "댓글 추가 실패");
     return data as Comment;
 }
 
 export async function updateCommentApi(id: number | string, content: string) {
-    // Note: Verify the URL for comment updates in your router. 
-    // Standard viewset router is usually /api/interactions/comments/{id}/ 
-    // or nested if configured that way. Keeping as per your file.
     const res = await fetch(`/api/interactions/comments/${id}/`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken") || ""
-         },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") || "" },
         credentials: "include",
         body: JSON.stringify({ content }),
     });
-
     const data = (await safeJson(res)) as Comment & ApiResponse;
-
-    if (!res.ok) {
-        throw new Error((data as ApiResponse).detail || "댓글 수정 실패");
-    }
-
+    if (!res.ok) throw new Error((data as ApiResponse).detail || "댓글 수정 실패");
     return data as Comment;
 }
 
@@ -299,58 +177,33 @@ export async function deleteCommentApi(id: number | string) {
     const res = await fetch(`/api/interactions/comments/${id}/`, {
         method: "DELETE",
         credentials: "include",
-        headers: {
-            "X-CSRFToken": getCookie("csrftoken") || ""
-         },
+        headers: { "X-CSRFToken": getCookie("csrftoken") || "" },
     });
-
     const data: ApiResponse = await safeJson(res);
-
-    if (!res.ok) {
-        throw new Error(data.detail || "댓글 삭제 실패");
-    }
-
+    if (!res.ok) throw new Error(data.detail || "댓글 삭제 실패");
     return data;
 }
 
-/**
- * ✅ 좋아요 생성: POST /api/posts/{id}/likes/
- */
+/** ✅ 좋아요 생성: POST /api/posts/{id}/likes/ */
 export async function likePostApi(postId: number | string) {
     const res = await fetch(`/api/posts/${postId}/likes/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken") || ""
-         },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") || "" },
         credentials: "include",
     });
-
     const data: ApiResponse = await safeJson(res);
-
-    if (!res.ok) {
-        throw new Error(data.detail || "좋아요 실패");
-    }
-    // Expected response: { post_id, like_count, liked_by_me }
+    if (!res.ok) throw new Error(data.detail || "좋아요 실패");
     return data; 
 }
 
-/**
- * ✅ 좋아요 취소: DELETE /api/posts/{id}/likes/
- */
+/** ✅ 좋아요 취소: DELETE /api/posts/{id}/likes/ */
 export async function unlikePostApi(postId: number | string) {
     const res = await fetch(`/api/posts/${postId}/likes/`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken") || ""
-         },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") || "" },
         credentials: "include",
     });
-
     const data: ApiResponse = await safeJson(res);
-
-    if (!res.ok) {
-        throw new Error(data.detail || "좋아요 취소 실패");
-    }
-    // Expected response: { post_id, like_count, liked_by_me }
+    if (!res.ok) throw new Error(data.detail || "좋아요 취소 실패");
     return data; 
 }

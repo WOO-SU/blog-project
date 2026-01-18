@@ -4,13 +4,9 @@ import { LoginPage } from './components/LoginPage';
 import { MainPage } from './components/MainPage';
 import { PostDetailPage } from './components/PostDetailPage';
 import { NewPostPage } from './components/NewPostPage';
-// MyPostViewPage import 제거
 import { SettingsPage } from './components/SettingsPage';
-
-// API 함수 및 타입 임포트
 import { getPostsApi, logoutApi, Post as PostType } from "./api/auth";
 
-// 페이지 타입 정의
 type Page = 
   | { type: 'login' }
   | { type: 'main' }
@@ -24,12 +20,8 @@ export default function App() {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 0. 앱 시작 시: CSRF 토큰 발급 + 로그인 상태 확인
   useEffect(() => {
-    fetch('/api/user/me/', {
-      method: 'GET',
-      credentials: 'include',
-    })
+    fetch('/api/user/me/', { method: 'GET', credentials: 'include' })
       .then(res => {
         if (res.ok) {
           setIsLoggedIn(true);
@@ -39,29 +31,19 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  // 1. 게시글 목록 불러오기 (API 연동)
   const fetchPosts = useCallback(async () => {
     if (!isLoggedIn) return;
     setIsLoading(true);
     try {
       const data = await getPostsApi();
-      console.log("posts from api:", data);  
-
-      // 서버 데이터를 프론트엔드 형식에 맞게 가공
       const processedPosts = data.map((post: any) => ({
         ...post,
-        // 1. preview
         preview: post.preview || (post.content.length > 100 
           ? post.content.substring(0, 100) + '...' 
           : post.content),
-        
-        // 2. Ensure types match (Mapping snake_case from DB to frontend expected)
-        // If backend sends 'like_count', we keep it. 
-        // If backend sends 'liked_by_me', we keep it.
         like_count: post.like_count || 0,
-        liked_by_me: post.liked_by_me || false,
+        liked_by_me: post.liked_by_me || false, // Note: This might be false from List API
       }));
-  
       setPosts(processedPosts); 
     } catch (error) {
       console.error("Failed to fetch posts:", error);
@@ -70,11 +52,8 @@ export default function App() {
     }
   }, [isLoggedIn]);
 
-  // 로그인 상태가 되면 데이터 로드
   useEffect(() => {
-    if (isLoggedIn) {
-      fetchPosts();
-    }
+    if (isLoggedIn) fetchPosts();
   }, [isLoggedIn, fetchPosts]);
 
   const handleLogin = () => {
@@ -126,10 +105,7 @@ export default function App() {
       
       <main>
         {currentPage.type === 'main' && (
-          <MainPage 
-            posts={posts} 
-            onNavigate={handleNavigate} 
-          />
+          <MainPage posts={posts} onNavigate={handleNavigate} />
         )}
         
         {currentPage.type === 'post-detail' && (() => {
@@ -161,10 +137,7 @@ export default function App() {
         )}
         
         {currentPage.type === 'settings' && (
-          <SettingsPage 
-            posts={posts} 
-            onNavigate={handleNavigate} 
-          />
+          <SettingsPage posts={posts} onNavigate={handleNavigate} />
         )}
       </main>
     </div>

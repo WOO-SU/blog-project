@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { 
   Post as PostType, 
-  likePostApi,      // ✅ New API
-  unlikePostApi,    // ✅ New API
+  likePostApi, 
+  unlikePostApi, 
   createCommentApi,
   getCommentsApi,
   getPostDetailApi,
@@ -13,7 +13,6 @@ import {
 } from '../api/auth';
 
 interface PostDetailPageProps {
-  // Combine PostType with any potential extra fields like isUserPost
   post: PostType & { isUserPost?: boolean };
   onRefresh: () => void;
   onNavigate: (page: { type: string; postId?: number | string }) => void;
@@ -25,68 +24,36 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
   const [editedCommentText, setEditedCommentText] = useState('');
   const [comments, setComments] = useState<any[]>([]);
   
-  // ✅ State for Likes (initialized from backend fields)
+  // Initialize with props, but we will fetch the 'true' status immediately
   const [isLiked, setIsLiked] = useState<boolean>(post.liked_by_me || false);
   const [likeCount, setLikeCount] = useState<number>(post.like_count || 0);
+  const [isUserPost, setIsUserPost] = useState<boolean>(post.is_mine || post.isUserPost || false);
 
-  // Sync state when prop changes (e.g. after a refresh)
-  useEffect(() => {
-    setIsLiked(post.liked_by_me || false);
-    setLikeCount(post.like_count || 0);
-  }, [post.liked_by_me, post.like_count]);
-  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // 게시글 삭제 핸들러
-  const handleDeletePost = async () => {
-    setIsDeletingPost(true);
-    try {
-      await deletePostApi(post.id);
-      await onRefresh();
-      onNavigate({ type: 'main' });
-    } catch (error: any) {
-      alert(error.message || "게시글 삭제 실패");
-      setIsDeletingPost(false);
-    }
-  };
-
-  // ✅ 좋아요 토글 로직 수정
-  const handleToggleLike = async () => {
-    // 1. Optimistic Update (Assume success)
-    const prevLiked = isLiked;
-    const prevCount = likeCount;
-
-    setIsLiked(!prevLiked);
-    setLikeCount(prevLiked ? prevCount - 1 : prevCount + 1);
-
-    try {
-      // 2. Call appropriate API based on *current* state (before toggle)
-      let response;
-      if (prevLiked) {
-         // If it was liked, we want to UNLIKE (DELETE)
-         response = await unlikePostApi(post.id);
-      } else {
-         // If it was NOT liked, we want to LIKE (POST)
-         response = await likePostApi(post.id);
-      }
+  // 1. Fetch REAL Detail Data (Because List API might miss liked_by_me)
+  useEffect(() => {
+    let isMounted = true;
+    
+    getPostDetailApi(post.id)
+      .then((data: any) => {
+         if (isMounted) {
+            // Update local state with the AUTHORITATIVE data from detail API
+            setIsLiked(data.liked_by_me);
+            setLikeCount(data.like_count);
+            setIsUserPost(data.is_mine);
+         }
+      })
+      .catch((error) => {
+        console.error("Failed to fetch post detail:", error);
+      });
       
-      // 3. Update with actual server data to be safe
-      if (response) {
-          setIsLiked(response.liked_by_me);
-          setLikeCount(response.like_count);
-      }
-      
-      onRefresh(); // Refresh parent list
-    } catch (error: any) {
-      console.error(error);
-      // Revert on error
-      setIsLiked(prevLiked);
-      setLikeCount(prevCount);
-    }
-  };
+    return () => { isMounted = false; };
+  }, [post.id]);
 
+  // 2. Load Comments
   const loadComments = async () => {
     try {
       const data = await getCommentsApi(post.id);
@@ -101,31 +68,59 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     loadComments();
   }, [post.id]);
 
-  useEffect(() => {
-    // Also fetch fresh details to ensure ownership/like status is correct
-    getPostDetailApi(post.id)
-      .then((data: any) => {
-         // Update local like state from fresh fetch
-         setIsLiked(data.liked_by_me);
-         setLikeCount(data.like_count);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch post detail:", error);
-      });
-  }, [post.id]);
+  const handleDeletePost = async () => {
+    setIsDeletingPost(true);
+    try {
+      await deletePostApi(post.id);
+      await onRefresh();
+      onNavigate({ type: 'main' });
+    } catch (error: any) {
+      alert(error.message || "게시글 삭제 실패");
+      setIsDeletingPost(false);
+    }
+  };
 
-  // 댓글 작성
+  // 3. Like Toggle Logic
+  const handleToggleLike = async () => {
+    // Optimistic Update
+    const prevLiked = isLiked;
+    const prevCount = likeCount;
+
+    setIsLiked(!prevLiked);
+    setLikeCount(prevLiked ? prevCount - 1 : prevCount + 1);
+
+    try {
+      let response;
+      if (prevLiked) {
+         // Was liked -> Delete like
+         response = await unlikePostApi(post.id);
+      } else {
+         // Was not liked -> Create like
+         response = await likePostApi(post.id);
+      }
+      
+      // Update with confirmed data from server
+      if (response) {
+          setIsLiked(response.liked_by_me);
+          setLikeCount(response.like_count);
+      }
+      
+      // Notify parent to update list (but we ignore parent's props for likes now)
+      onRefresh(); 
+    } catch (error: any) {
+      console.error(error);
+      // Revert on error
+      setIsLiked(prevLiked);
+      setLikeCount(prevCount);
+    }
+  };
+
   const handleAddComment = async () => {
     if (!commentText.trim() || isSubmitting) return;
-    
     setIsSubmitting(true);
     try {
-      await createCommentApi({ 
-        post: Number(post.id), 
-        content: commentText 
-      });
+      await createCommentApi({ post: Number(post.id), content: commentText });
       setCommentText('');
-      onRefresh();
       await loadComments();
     } catch (error: any) {
       alert(error.message || "댓글 작성 실패");
@@ -134,14 +129,12 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     }
   };
 
-  // 댓글 수정
   const handleEditComment = async (commentId: number | string) => {
     if (!editedCommentText.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
       await updateCommentApi(commentId, editedCommentText);
       setEditingCommentId(null);
-      onRefresh();
       await loadComments();
     } catch (error: any) {
       alert(error.message);
@@ -150,12 +143,10 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     }
   };
 
-  // 댓글 삭제
   const handleDeleteComment = async (commentId: number | string) => {
     if (!window.confirm("댓글을 삭제하시겠습니까?")) return;
     try {
       await deleteCommentApi(commentId);
-      onRefresh();
       await loadComments();
     } catch (error: any) {
       alert(error.message);
@@ -164,13 +155,12 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 relative">
-      
       <div className="flex items-start justify-between mb-8">
         <h1 className="text-4xl font-bold text-gray-900 leading-tight">
           {post.title}
         </h1>
 
-        {(post.is_mine || post.isUserPost) && (
+        {(isUserPost) && (
           <div className="flex gap-2 shrink-0 ml-4">
             <button
               onClick={() => onNavigate({ type: 'new-post', postId: post.id })}
