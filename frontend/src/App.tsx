@@ -10,11 +10,11 @@ import { SettingsPage } from './components/SettingsPage';
 // API 함수 및 타입 임포트
 import { getPostsApi, logoutApi, Post as PostType } from "./api/auth";
 
-// 페이지 타입 정의 ('my-post-view' 제거 -> 'post-detail'로 통합)
+// 페이지 타입 정의
 type Page = 
   | { type: 'login' }
   | { type: 'main' }
-  | { type: 'post-detail'; postId: string | number } // ID 타입을 유연하게 (string | number)
+  | { type: 'post-detail'; postId: string | number }
   | { type: 'new-post'; editPostId?: string | number }
   | { type: 'settings' };
 
@@ -32,14 +32,11 @@ export default function App() {
     })
       .then(res => {
         if (res.ok) {
-          // 선택 사항: 로그인 상태면 true로
           setIsLoggedIn(true);
           setCurrentPage({ type: 'main' });
         }
       })
-      .catch(() => {
-        // 로그인 안 된 상태 → 그냥 무시
-      });
+      .catch(() => {});
   }, []);
 
   // 1. 게시글 목록 불러오기 (API 연동)
@@ -51,14 +48,18 @@ export default function App() {
       console.log("posts from api:", data);  
 
       // 서버 데이터를 프론트엔드 형식에 맞게 가공
-      const processedPosts = data.map((post: PostType) => ({
+      const processedPosts = data.map((post: any) => ({
         ...post,
-        // 1. preview가 없으면 content에서 100자만 추출
+        // 1. preview
         preview: post.preview || (post.content.length > 100 
           ? post.content.substring(0, 100) + '...' 
           : post.content),
-        // 2. 만약 서버에서 isUserPost를 안준다면 여기서 로직 추가 가능
-        // isUserPost: post.author === currentUser.username 
+        
+        // 2. Ensure types match (Mapping snake_case from DB to frontend expected)
+        // If backend sends 'like_count', we keep it. 
+        // If backend sends 'liked_by_me', we keep it.
+        like_count: post.like_count || 0,
+        liked_by_me: post.liked_by_me || false,
       }));
   
       setPosts(processedPosts); 
@@ -93,28 +94,20 @@ export default function App() {
     }
   };
 
-  // 2. 네비게이션 핸들러 (통합 및 호환성 처리)
   const handleNavigate = (page: any) => {
-    // 기존 'my-post-view' 요청이 오면 'post-detail'로 자동 변환
     if (page.type === 'my-post-view') {
       setCurrentPage({ type: 'post-detail', postId: page.postId });
       return;
     }
-    
-    // 'new-post' 처리
     if (page.type === 'new-post') {
       setCurrentPage({ type: 'new-post', editPostId: page.postId || page.editPostId });
       return;
     }
-
-    // 그 외 (main, settings, post-detail 등)
     setCurrentPage(page);
   };
 
-  // 3. 헬퍼 함수: 현재 보여줄 포스트 찾기
   const getCurrentPost = () => {
     if (currentPage.type === 'post-detail' && currentPage.postId) {
-      // String()으로 양쪽을 감싸서 "1" === "1" 형태가 되도록 보장
       return posts.find(p => String(p.id) === String(currentPage.postId));
     }
     if (currentPage.type === 'new-post' && currentPage.editPostId) {
@@ -139,14 +132,13 @@ export default function App() {
           />
         )}
         
-        {/* ✅ 'my-post-view' 대신 'post-detail'이 모든 상세 보기를 담당 */}
         {currentPage.type === 'post-detail' && (() => {
           const post = getCurrentPost();
           return post ? (
             <PostDetailPage 
               post={post}
-              onRefresh={fetchPosts} // 데이터 변경(댓글, 좋아요, 삭제 등) 시 목록 갱신
-              onNavigate={handleNavigate} // 삭제/수정 후 페이지 이동용
+              onRefresh={fetchPosts} 
+              onNavigate={handleNavigate} 
             />
           ) : (
             <div className="text-center py-20 text-gray-500">Post not found</div>
@@ -157,8 +149,7 @@ export default function App() {
           <NewPostPage 
             editPost={getCurrentPost()}
             onSuccess={(newId) => {
-              fetchPosts(); // 목록 갱신
-              // 글 작성/수정 완료 후 해당 글 상세 페이지로 이동
+              fetchPosts(); 
               if (newId) {
                 setCurrentPage({ type: 'post-detail', postId: newId });
               } else {
@@ -171,6 +162,7 @@ export default function App() {
         
         {currentPage.type === 'settings' && (
           <SettingsPage 
+            posts={posts} 
             onNavigate={handleNavigate} 
           />
         )}

@@ -3,6 +3,7 @@ export type ApiResponse = { detail?: string };
 
 async function safeJson(res: Response) {
   try {
+    if (res.status === 204) return {}; 
     return await res.json();
   } catch {
     return {};
@@ -13,13 +14,10 @@ async function safeJson(res: Response) {
 function getCookie(name: string) {
     const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
     return match ? decodeURIComponent(match[2]) : null;
-  }
-  
+}
 
 /**
  * 로그인: POST /api/user/login
- * body: { username, password }
- * ✅ 세션/쿠키 방식이면 credentials: "include" 필수
  */
 export async function loginApi(username: string, password: string) {
   const res = await fetch(`/api/user/login/`, {
@@ -65,19 +63,21 @@ export async function logoutApi() {
  * -------------------------- */
 
 export type Post = {
-    id: string | number;
+    id: number;            // Changed to number to match ID usage
     title: string;
     content: string;
-    preview?: string;      // 추가: 목록에서 보여줄 요약문
-    author: string;        // 작성자 이름
-    created_at: string;    // 생성일
-    likes: number;         // 좋아요 수
-    likedByUser: boolean;  // 현재 유저가 좋아요를 눌렀는지 여부
-    isUserPost?: boolean;  // 추가: 내가 쓴 글인지 여부
-    comments: any[];       // 댓글 목록
-  };
+    preview?: string;      
+    author: string;        
+    created_at: string;    
+    
+    // ✅ Updated to match Backend Serializer (snake_case)
+    like_count: number;    
+    liked_by_me: boolean;  
+    is_mine?: boolean;     // Assuming backend sends this or we calculate it
+    comments: any[];       
+};
   
-export type PostsListResponse = Post[]; // 목록 GET이 배열로 온다고 가정
+export type PostsListResponse = Post[]; 
 
 export type CreatePostBody = {
     title?: string;
@@ -91,7 +91,6 @@ export type UpdatePostBody = {
 
 /**
  * 글 조회(목록): GET /api/posts/
- * 세분화 필요!!
  */
 export async function getPostsApi() {
     const res = await fetch(`/api/posts/`, {
@@ -102,13 +101,14 @@ export async function getPostsApi() {
           },
     });
 
-    const data = (await safeJson(res)) as PostsListResponse & ApiResponse;
+    const data = (await safeJson(res)) as any; // Allow flexible response handling
 
     if (!res.ok) {
         throw new Error((data as ApiResponse).detail || "글 조회 실패");
     }
 
-    return data.results;
+    // Handle pagination (results) or direct array
+    return Array.isArray(data) ? data : data.results;
 }
 
 /**
@@ -155,7 +155,6 @@ export async function getMyPostsApi() {
 
 /**
  * 글 업로드(작성): POST /api/posts/
- * body: { ... }
  */
 export async function createPostApi(body: CreatePostBody) {
     const res = await fetch(`/api/posts/`, {
@@ -177,8 +176,7 @@ export async function createPostApi(body: CreatePostBody) {
 }
 
 /**
- * 글 수정: PATCH /api/posts/{id}
- * body: 부분 업데이트(예: { title?, content? })
+ * 글 수정: PATCH /api/posts/{id}/
  */
 export async function updatePostApi(id: number | string, body: UpdatePostBody) {
     const res = await fetch(`/api/posts/${id}/`, {
@@ -200,8 +198,7 @@ export async function updatePostApi(id: number | string, body: UpdatePostBody) {
 }
 
 /**
- * 글 삭제: DELETE /api/posts/{id}
- * (성공 시 204 No Content일 수 있어서 safeJson이 {} 반환해도 정상)
+ * 글 삭제: DELETE /api/posts/{id}/
  */
 export async function deletePostApi(id: number | string) {
     const res = await fetch(`/api/posts/${id}/`, {
@@ -218,10 +215,9 @@ export async function deletePostApi(id: number | string) {
         throw new Error(data.detail || "글 삭제 실패");
     }
 
-    return data; // 보통 {} 또는 {detail} (백엔드 구현에 따라)
+    return data; 
 }
 
-// 260114 14:57
 
 /** --------------------------
  * Comments & Likes
@@ -240,9 +236,6 @@ export type CreateCommentBody = {
     content: string;
 };
 
-/**
- * 댓글 조회: GET /api/posts/{postId}/comments/
- */
 export async function getCommentsApi(postId: number | string) {
     const res = await fetch(`/api/posts/${postId}/comments/`, {
         method: "GET",
@@ -252,19 +245,15 @@ export async function getCommentsApi(postId: number | string) {
           },
     });
 
-    const data = (await safeJson(res)) as { results?: Comment[] } & Comment[] & ApiResponse;
+    const data = (await safeJson(res)) as any;
 
     if (!res.ok) {
         throw new Error((data as ApiResponse).detail || "댓글 조회 실패");
     }
 
-    return (data as { results?: Comment[] }).results || (data as Comment[]);
+    return (data.results || data) as Comment[];
 }
 
-/**
- * 댓글 추가: POST /api/posts/{postId}/comments/
- * body: { content }
- */
 export async function createCommentApi(body: CreateCommentBody) {
     const res = await fetch(`/api/posts/${body.post}/comments/`, {
         method: "POST",
@@ -284,10 +273,10 @@ export async function createCommentApi(body: CreateCommentBody) {
     return data as Comment;
 }
 
-/**
- * 댓글 수정: PATCH /api/comments/{id}/
- */
 export async function updateCommentApi(id: number | string, content: string) {
+    // Note: Verify the URL for comment updates in your router. 
+    // Standard viewset router is usually /api/interactions/comments/{id}/ 
+    // or nested if configured that way. Keeping as per your file.
     const res = await fetch(`/api/interactions/comments/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json",
@@ -306,9 +295,6 @@ export async function updateCommentApi(id: number | string, content: string) {
     return data as Comment;
 }
 
-/**
- * 댓글 삭제: DELETE /api/comments/{id}/
- */
 export async function deleteCommentApi(id: number | string) {
     const res = await fetch(`/api/interactions/comments/${id}/`, {
         method: "DELETE",
@@ -328,28 +314,43 @@ export async function deleteCommentApi(id: number | string) {
 }
 
 /**
- * 좋아요 토글: POST /api/likes/toggle/
- * 한 번 누르면 좋아요(생성), 다시 누르면 좋아요 취소(삭제) 처리
- * @param postId 좋아요를 누를 게시글의 ID
+ * ✅ 좋아요 생성: POST /api/posts/{id}/likes/
  */
-export async function toggleLikeApi(postId: number | string) {
-    const res = await fetch(`/api/interactions/likes/toggle/`, {
+export async function likePostApi(postId: number | string) {
+    const res = await fetch(`/api/posts/${postId}/likes/`, {
         method: "POST",
         headers: { "Content-Type": "application/json",
             "X-CSRFToken": getCookie("csrftoken") || ""
          },
         credentials: "include",
-        // 백엔드에서 어떤 게시글에 좋아요를 하는지 알기 위해 postId를 보냅니다.
-        body: JSON.stringify({ post_id : postId }), 
     });
 
     const data: ApiResponse = await safeJson(res);
 
     if (!res.ok) {
-        // 응답이 성공(200~299)이 아닐 경우 에러를 던집니다.
-        throw new Error(data.detail || "좋아요 처리 실패");
+        throw new Error(data.detail || "좋아요 실패");
     }
+    // Expected response: { post_id, like_count, liked_by_me }
+    return data; 
+}
 
-    // 성공 시 백엔드에서 보낸 응답(예: { detail: "좋아요 완료" } 등)을 반환합니다.
+/**
+ * ✅ 좋아요 취소: DELETE /api/posts/{id}/likes/
+ */
+export async function unlikePostApi(postId: number | string) {
+    const res = await fetch(`/api/posts/${postId}/likes/`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken") || ""
+         },
+        credentials: "include",
+    });
+
+    const data: ApiResponse = await safeJson(res);
+
+    if (!res.ok) {
+        throw new Error(data.detail || "좋아요 취소 실패");
+    }
+    // Expected response: { post_id, like_count, liked_by_me }
     return data; 
 }

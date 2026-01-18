@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Edit2, Trash2, Loader2 } from 'lucide-react';
-// auth.ts에서 정의한 Post 타입과 API 함수들을 임포트
 import { 
   Post as PostType, 
-  toggleLikeApi, 
+  likePostApi,      // ✅ New API
+  unlikePostApi,    // ✅ New API
   createCommentApi,
   getCommentsApi,
   getPostDetailApi,
@@ -13,7 +13,7 @@ import {
 } from '../api/auth';
 
 interface PostDetailPageProps {
-  // PostType에 없는 프론트엔드 전용 필드(isUserPost)를 합집합(&)으로 추가
+  // Combine PostType with any potential extra fields like isUserPost
   post: PostType & { isUserPost?: boolean };
   onRefresh: () => void;
   onNavigate: (page: { type: string; postId?: number | string }) => void;
@@ -24,7 +24,16 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
   const [editingCommentId, setEditingCommentId] = useState<number | string | null>(null);
   const [editedCommentText, setEditedCommentText] = useState('');
   const [comments, setComments] = useState<any[]>([]);
-  const [isUserPost, setIsUserPost] = useState<boolean>(false);
+  
+  // ✅ State for Likes (initialized from backend fields)
+  const [isLiked, setIsLiked] = useState<boolean>(post.liked_by_me || false);
+  const [likeCount, setLikeCount] = useState<number>(post.like_count || 0);
+
+  // Sync state when prop changes (e.g. after a refresh)
+  useEffect(() => {
+    setIsLiked(post.liked_by_me || false);
+    setLikeCount(post.like_count || 0);
+  }, [post.liked_by_me, post.like_count]);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
@@ -43,13 +52,38 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     }
   };
 
-  // 좋아요 토글
+  // ✅ 좋아요 토글 로직 수정
   const handleToggleLike = async () => {
+    // 1. Optimistic Update (Assume success)
+    const prevLiked = isLiked;
+    const prevCount = likeCount;
+
+    setIsLiked(!prevLiked);
+    setLikeCount(prevLiked ? prevCount - 1 : prevCount + 1);
+
     try {
-      await toggleLikeApi(post.id);
-      onRefresh();
+      // 2. Call appropriate API based on *current* state (before toggle)
+      let response;
+      if (prevLiked) {
+         // If it was liked, we want to UNLIKE (DELETE)
+         response = await unlikePostApi(post.id);
+      } else {
+         // If it was NOT liked, we want to LIKE (POST)
+         response = await likePostApi(post.id);
+      }
+      
+      // 3. Update with actual server data to be safe
+      if (response) {
+          setIsLiked(response.liked_by_me);
+          setLikeCount(response.like_count);
+      }
+      
+      onRefresh(); // Refresh parent list
     } catch (error: any) {
       console.error(error);
+      // Revert on error
+      setIsLiked(prevLiked);
+      setLikeCount(prevCount);
     }
   };
 
@@ -68,13 +102,15 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
   }, [post.id]);
 
   useEffect(() => {
+    // Also fetch fresh details to ensure ownership/like status is correct
     getPostDetailApi(post.id)
-      .then((data) => {
-        setIsUserPost(Boolean((data as any).is_mine));
+      .then((data: any) => {
+         // Update local like state from fresh fetch
+         setIsLiked(data.liked_by_me);
+         setLikeCount(data.like_count);
       })
       .catch((error) => {
         console.error("Failed to fetch post detail:", error);
-        setIsUserPost(false);
       });
   }, [post.id]);
 
@@ -85,7 +121,6 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     setIsSubmitting(true);
     try {
       await createCommentApi({ 
-        // ✅ post.id를 Number()로 감싸서 확실하게 숫자로 전달합니다.
         post: Number(post.id), 
         content: commentText 
       });
@@ -130,14 +165,12 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 relative">
       
-      {/* 제목 및 수정/삭제 버튼 */}
       <div className="flex items-start justify-between mb-8">
         <h1 className="text-4xl font-bold text-gray-900 leading-tight">
           {post.title}
         </h1>
 
-        {/* ✅ 내 글일 때만 수정/삭제 버튼 노출 */}
-        {(post.isUserPost || isUserPost) && (
+        {(post.is_mine || post.isUserPost) && (
           <div className="flex gap-2 shrink-0 ml-4">
             <button
               onClick={() => onNavigate({ type: 'new-post', postId: post.id })}
@@ -170,18 +203,17 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
           </div>
         </div>
 
-        {/* 좋아요 및 댓글 수 */}
         <div className="bg-gray-50 px-8 py-4 border-t border-gray-200 flex items-center gap-4">
            <button
             onClick={handleToggleLike}
             className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
-              post.likedByUser 
+              isLiked 
                 ? 'bg-red-100 text-red-600 ring-1 ring-red-200' 
                 : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
           >
-            <Heart className={`w-5 h-5 ${post.likedByUser ? 'fill-current' : ''}`} />
-            <span className="font-medium">{post.likes || 0}</span>
+            <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+            <span className="font-medium">{likeCount}</span>
           </button>
           <div className="flex items-center gap-2 text-gray-600 px-4 py-2">
             <MessageCircle className="w-5 h-5" />
@@ -190,11 +222,9 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
         </div>
       </div>
 
-      {/* 댓글 섹션 */}
       <div className="mt-10">
         <h3 className="text-xl font-bold text-gray-900 mb-6">Comments</h3>
         
-        {/* 댓글 입력창 */}
         <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
           <textarea
             value={commentText}
@@ -213,7 +243,6 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
           </div>
         </div>
 
-        {/* 댓글 목록 */}
         <div className="space-y-4">
           {comments.map((comment: any) => (
             <div key={comment.id} className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
@@ -239,7 +268,6 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
                     </div>
                     <p className="text-gray-700">{comment.content}</p>
                   </div>
-                  {/* 댓글 작성자 본인 확인 로직은 실제 유저 정보가 들어오면 추가 가능 */}
                   <div className="flex gap-1">
                     <button onClick={() => { setEditingCommentId(comment.id); setEditedCommentText(comment.content); }} className="p-1 text-gray-400 hover:text-blue-600"><Edit2 className="w-3.5 h-3.5" /></button>
                     <button onClick={() => handleDeleteComment(comment.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -251,7 +279,6 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
         </div>
       </div>
 
-      {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl">
