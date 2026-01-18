@@ -31,7 +31,7 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               <Home className="w-4 h-4" />
-              Home
+              Main
             </button>
 
             <button
@@ -40,7 +40,7 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               <PenSquare className="w-4 h-4" />
-              New post
+              New Post
             </button>
 
             <button
