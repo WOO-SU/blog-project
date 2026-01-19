@@ -38,7 +38,9 @@ export async function loginApi(username: string, password: string) {
 export async function logoutApi() {
   const res = await fetch(`/api/user/logout/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken") || "",
+     },
     credentials: "include",
   });
   const data: ApiResponse = await safeJson(res);
