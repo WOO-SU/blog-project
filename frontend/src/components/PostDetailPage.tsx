@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Post as PostType, 
   likePostApi, 
   unlikePostApi, 
   createCommentApi,
   getCommentsApi,
-  getPostDetailApi,
   updateCommentApi, 
   deleteCommentApi,
   deletePostApi 
@@ -15,41 +15,34 @@ import {
 interface PostDetailPageProps {
   post: PostType & { isUserPost?: boolean };
   onRefresh: () => void;
-  onNavigate: (page: { type: string; postId?: number | string }) => void;
 }
 
-export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPageProps) {
+export function PostDetailPage({ post, onRefresh }: PostDetailPageProps) {
+  const navigate = useNavigate();
   const [commentText, setCommentText] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<number | string | null>(null);
   const [editedCommentText, setEditedCommentText] = useState('');
   const [comments, setComments] = useState<any[]>([]);
   
-  const [isLiked, setIsLiked] = useState<boolean>(post.liked_by_me || false);
-  const [likeCount, setLikeCount] = useState<number>(post.like_count || 0);
-  const [isUserPost, setIsUserPost] = useState<boolean>(post.is_mine || post.isUserPost || false);
+  const [isLiked, setIsLiked] = useState<boolean>(
+    Boolean((post as any).liked_by_me ?? post.likedByUser)
+  );
+  const [likeCount, setLikeCount] = useState<number>(
+    (post as any).like_count ?? post.likes ?? 0
+  );
+  const [isUserPost, setIsUserPost] = useState<boolean>(
+    Boolean((post as any).is_mine ?? post.isUserPost)
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // 1. Fetch REAL Detail Data
   useEffect(() => {
-    let isMounted = true;
-    
-    getPostDetailApi(post.id)
-      .then((data: any) => {
-         if (isMounted) {
-            setIsLiked(data.liked_by_me);
-            setLikeCount(data.like_count);
-            setIsUserPost(data.is_mine);
-         }
-      })
-      .catch((error) => {
-        console.error("Failed to fetch post detail:", error);
-      });
-      
-    return () => { isMounted = false; };
-  }, [post.id]);
+    setIsLiked(Boolean((post as any).liked_by_me ?? post.likedByUser));
+    setLikeCount((post as any).like_count ?? post.likes ?? 0);
+    setIsUserPost(Boolean((post as any).is_mine ?? post.isUserPost));
+  }, [post]);
 
   const loadComments = async () => {
     try {
@@ -70,7 +63,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
     try {
       await deletePostApi(post.id);
       await onRefresh();
-      onNavigate({ type: 'main' });
+      navigate('/');
     } catch (error: any) {
       alert(error.message || "게시글 삭제 실패");
       setIsDeletingPost(false);
@@ -156,7 +149,7 @@ export function PostDetailPage({ post, onRefresh, onNavigate }: PostDetailPagePr
         {isUserPost && (
           <div className="flex gap-2 shrink-0 ml-4">
             <button
-              onClick={() => onNavigate({ type: 'new-post', postId: post.id })}
+              onClick={() => navigate(`/posts/${post.id}/edit`)}
               className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
             >
               <Edit2 className="w-4 h-4" /> Edit
