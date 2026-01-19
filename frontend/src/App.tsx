@@ -22,13 +22,20 @@ export default function App() {
 
   useEffect(() => {
     fetch('/api/user/me/', { method: 'GET', credentials: 'include' })
-      .then(res => {
-        if (res.ok) {
+      .then(async res => {
+        const data = await res.json();
+        if (res.ok&& data.authenticated) {
           setIsLoggedIn(true);
           setCurrentPage({ type: 'main' });
+        } else {
+          setIsLoggedIn(false);
+          setCurrentPage({ type: 'login' });
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setIsLoggedIn(false);
+        setCurrentPage({ type: 'login' });
+      });
   }, []);
 
   const fetchPosts = useCallback(async () => {
