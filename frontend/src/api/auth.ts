@@ -58,6 +58,8 @@ export type Post = {
     created_at: string;    
     like_count: number;    
     liked_by_me: boolean;  
+    likes?: number;
+    likedByUser?: boolean;
     is_mine?: boolean;
     isUserPost?: boolean; // Added this property
     comments: any[];       

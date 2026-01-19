@@ -1,54 +1,70 @@
 import { useState, useEffect, useCallback } from 'react';
+import {
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useNavigate,
+  useParams,
+} from 'react-router-dom';
 import { Header } from './components/Header';
 import { LoginPage } from './components/LoginPage';
 import { MainPage } from './components/MainPage';
 import { PostDetailPage } from './components/PostDetailPage';
 import { NewPostPage } from './components/NewPostPage';
 import { SettingsPage } from './components/SettingsPage';
-import { getPostsApi, logoutApi, Post as PostType } from "./api/auth";
+import {
+  getPostsApi,
+  logoutApi,
+  getPostDetailApi,
+  Post as PostType,
+} from './api/auth';
 
-type Page = 
-  | { type: 'login' }
-  | { type: 'main' }
-  | { type: 'post-detail'; postId: string | number }
-  | { type: 'new-post'; editPostId?: string | number }
-  | { type: 'settings' };
+function normalizePost(post: any): PostType {
+  return {
+    ...post,
+    preview:
+      post.preview ||
+      (post.content && post.content.length > 100
+        ? post.content.substring(0, 100) + '...'
+        : post.content),
+    likes: post.likes ?? post.like_count ?? 0,
+    likedByUser: post.likedByUser ?? post.liked_by_me ?? false,
+    isUserPost: post.isUserPost ?? post.is_mine ?? false,
+  } as PostType;
+}
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentPage, setCurrentPage] = useState<Page>({ type: 'login' });
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [posts, setPosts] = useState<PostType[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch('/api/user/me/', { method: 'GET', credentials: 'include' })
-      .then(res => {
-        if (res.ok) {
+      .then(async (res) => {
+        const data = await res.json();
+        if (res.ok && data.authenticated) {
           setIsLoggedIn(true);
-          setCurrentPage({ type: 'main' });
+        } else {
+          setIsLoggedIn(false);
         }
+        setIsAuthChecked(true);
       })
-      .catch(() => {});
+      .catch(() => {
+        setIsLoggedIn(false);
+        setIsAuthChecked(true);
+      });
   }, []);
 
   const fetchPosts = useCallback(async () => {
     if (!isLoggedIn) return;
-    setIsLoading(true);
     try {
       const data = await getPostsApi();
-      const processedPosts = data.map((post: any) => ({
-        ...post,
-        preview: post.preview || (post.content.length > 100 
-          ? post.content.substring(0, 100) + '...' 
-          : post.content),
-        like_count: post.like_count || 0,
-        liked_by_me: post.liked_by_me || false, // Note: This might be false from List API
-      }));
-      setPosts(processedPosts); 
+      const processedPosts = data.map((post: any) => normalizePost(post));
+      setPosts(processedPosts);
     } catch (error) {
-      console.error("Failed to fetch posts:", error);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to fetch posts:', error);
     }
   }, [isLoggedIn]);
 
@@ -58,7 +74,7 @@ export default function App() {
 
   const handleLogin = () => {
     setIsLoggedIn(true);
-    setCurrentPage({ type: 'main' });
+    navigate('/');
   };
 
   const handleLogout = async () => {
@@ -69,77 +85,125 @@ export default function App() {
     } finally {
       setIsLoggedIn(false);
       setPosts([]);
-      setCurrentPage({ type: "login" });
+      navigate('/login');
     }
   };
 
-  const handleNavigate = (page: any) => {
-    if (page.type === 'my-post-view') {
-      setCurrentPage({ type: 'post-detail', postId: page.postId });
-      return;
+  const RequireAuth = () => {
+    if (!isAuthChecked) {
+      return <div className="text-center py-20 text-gray-500">Loading...</div>;
     }
-    if (page.type === 'new-post') {
-      setCurrentPage({ type: 'new-post', editPostId: page.postId || page.editPostId });
-      return;
-    }
-    setCurrentPage(page);
+    return isLoggedIn ? <Outlet /> : <Navigate to="/login" replace />;
   };
 
-  const getCurrentPost = () => {
-    if (currentPage.type === 'post-detail' && currentPage.postId) {
-      return posts.find(p => String(p.id) === String(currentPage.postId));
-    }
-    if (currentPage.type === 'new-post' && currentPage.editPostId) {
-      return posts.find(p => String(p.id) === String(currentPage.editPostId));
-    }
-    return undefined;
-  };
-
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
-  return (
+  const AuthedLayout = () => (
     <div className="min-h-screen bg-gray-50">
-      <Header onNavigate={handleNavigate} onLogout={handleLogout} />
-      
+      <Header onLogout={handleLogout} />
       <main>
-        {currentPage.type === 'main' && (
-          <MainPage posts={posts} onNavigate={handleNavigate} />
-        )}
-        
-        {currentPage.type === 'post-detail' && (() => {
-          const post = getCurrentPost();
-          return post ? (
-            <PostDetailPage 
-              post={post}
-              onRefresh={fetchPosts} 
-              onNavigate={handleNavigate} 
-            />
-          ) : (
-            <div className="text-center py-20 text-gray-500">Post not found</div>
-          );
-        })()}
-        
-        {currentPage.type === 'new-post' && (
-          <NewPostPage 
-            editPost={getCurrentPost()}
-            onSuccess={(newId) => {
-              fetchPosts(); 
-              if (newId) {
-                setCurrentPage({ type: 'post-detail', postId: newId });
-              } else {
-                setCurrentPage({ type: 'main' });
-              }
-            }}
-            onCancel={() => setCurrentPage({ type: 'main' })}
-          />
-        )}
-        
-        {currentPage.type === 'settings' && (
-          <SettingsPage posts={posts} onNavigate={handleNavigate} />
-        )}
+        <Outlet />
       </main>
     </div>
+  );
+
+  const PostDetailRoute = () => {
+    const { postId } = useParams();
+    const [post, setPost] = useState<PostType | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (!postId) return;
+      setError(null);
+      getPostDetailApi(postId)
+        .then((data) => setPost(normalizePost(data)))
+        .catch((err) => {
+          console.error(err);
+          setError('Post not found');
+        });
+    }, [postId]);
+
+    if (!postId) {
+      return <div className="text-center py-20 text-gray-500">Invalid post</div>;
+    }
+    if (error) {
+      return <div className="text-center py-20 text-gray-500">{error}</div>;
+    }
+    if (!post) {
+      return <div className="text-center py-20 text-gray-500">Loading...</div>;
+    }
+
+    return <PostDetailPage post={post} onRefresh={fetchPosts} />;
+  };
+
+  const NewPostRoute = () => (
+    <NewPostPage
+      onSuccess={(newId) => {
+        fetchPosts();
+        navigate(newId ? `/posts/${newId}` : '/');
+      }}
+      onCancel={() => navigate('/')}
+    />
+  );
+
+  const EditPostRoute = () => {
+    const { postId } = useParams();
+    const [post, setPost] = useState<PostType | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (!postId) return;
+      setError(null);
+      getPostDetailApi(postId)
+        .then((data) => setPost(normalizePost(data)))
+        .catch((err) => {
+          console.error(err);
+          setError('Post not found');
+        });
+    }, [postId]);
+
+    if (!postId) {
+      return <div className="text-center py-20 text-gray-500">Invalid post</div>;
+    }
+    if (error) {
+      return <div className="text-center py-20 text-gray-500">{error}</div>;
+    }
+    if (!post) {
+      return <div className="text-center py-20 text-gray-500">Loading...</div>;
+    }
+
+    return (
+      <NewPostPage
+        editPost={post}
+        onSuccess={(newId) => {
+          fetchPosts();
+          navigate(newId ? `/posts/${newId}` : `/posts/${post.id}`);
+        }}
+        onCancel={() => navigate(`/posts/${post.id}`)}
+      />
+    );
+  };
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          isLoggedIn ? (
+            <Navigate to="/" replace />
+          ) : (
+            <LoginPage onLogin={handleLogin} />
+          )
+        }
+      />
+      <Route element={<RequireAuth />}>
+        <Route element={<AuthedLayout />}>
+          <Route path="/" element={<MainPage posts={posts} />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/posts/new" element={<NewPostRoute />} />
+          <Route path="/posts/:postId" element={<PostDetailRoute />} />
+          <Route path="/posts/:postId/edit" element={<EditPostRoute />} />
+        </Route>
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

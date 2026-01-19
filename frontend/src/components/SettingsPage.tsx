@@ -1,15 +1,11 @@
 // frontend/src/components/SettingsPage.tsx
 import { useEffect, useState } from 'react';
 import { User, FileText, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Post, getMyPostsApi } from '../api/auth';
 
-interface SettingsPageProps {
-  // We accept posts to match App.tsx's usage, but we will fetch our own data
-  posts?: Post[]; 
-  onNavigate: (page: { type: string; postId?: string | number }) => void;
-}
-
-export function SettingsPage({ onNavigate }: SettingsPageProps) {
+export function SettingsPage() {
+  const navigate = useNavigate();
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -61,7 +57,7 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
             {myPosts.map(post => (
               <div 
                 key={post.id}
-                onClick={() => onNavigate({ type: 'post-detail', postId: post.id })}
+                onClick={() => navigate(`/posts/${post.id}`)}
                 className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
               >
                 <div>
@@ -77,7 +73,7 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
           <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
             <p>You haven't written any posts yet.</p>
             <button 
-              onClick={() => onNavigate({ type: 'new-post' })}
+              onClick={() => navigate('/posts/new')}
               className="mt-2 text-blue-600 hover:underline text-sm"
             >
               Create your first post
