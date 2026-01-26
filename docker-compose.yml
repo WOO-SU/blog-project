@@ -47,13 +47,14 @@ services:
   frontend:
     build: ./frontend
     container_name: blog_fe
+    command: npm run dev -- --host --port 3000
     volumes:
       - ./frontend:/app
       - /app/node_modules
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8000
       - WATCHPACK_POLLING=true
       - DEBUG=${DEBUG}
     depends_on:

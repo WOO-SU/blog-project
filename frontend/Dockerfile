@@ -13,4 +13,4 @@ COPY . .
 EXPOSE 3000
 
 # Start the development server
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev", "--", "--host"]
