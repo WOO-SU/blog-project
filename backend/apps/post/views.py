@@ -63,6 +63,13 @@ class PostViewSet(ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return PostSerializer
+        
+        if self.action == 'comments':
+            return CommentSerializer
+        
+        if self.action == 'likes':
+            return LikeSerializer
+        
         return PostListSerializer
 
     def get_queryset(self):
