@@ -44,13 +44,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'drf_yasg',
+
     'rest_framework',
     'rest_framework.authtoken',
+
+    'corsheaders',
+    'drf_yasg',
 
 ] + PROJECT_APPS
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -59,6 +64,16 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ALLOW_CREDENTIALS = True
+
+cors_env = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+csrf_env = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000")
+
+# Convert "url1,url2" -> ["url1", "url2"]
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_env.split(",")]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_env.split(",")]
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -137,16 +152,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-]
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
-
-CORS_ALLOW_CREDENTIALS = True
 
 
 
